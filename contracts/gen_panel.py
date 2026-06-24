@@ -138,17 +138,61 @@ Return JSON block:
 
         result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
 
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        # Set a 24-hour appeal window (86400 seconds)
+        appeal_deadline = now + 86400
+
+        case["status"] = 2  # status: 2 = judged (appeal window open)
+        case["ruling"] = json.dumps(result)
+        case["appeal_deadline"] = appeal_deadline
+        self.cases[case_id] = json.dumps(case)
+
+    @gl.public.write
+    def finalize_case(self, case_id: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 2:
+            raise gl.vm.UserError("Case not in appeal window")
+
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        if now <= int(case["appeal_deadline"]):
+            raise gl.vm.UserError("Appeal window is still open")
+
+        ruling = json.loads(case["ruling"])
         p_stake = u256(int(case["stake"]))
         d_stake = u256(int(case["defendant_stake"]))
         total_pool = p_stake + d_stake
 
-        if result["verdict"] == "plaintiff":
+        if ruling["verdict"] == "plaintiff":
             self._pay(case["plaintiff"], total_pool)
         else:
             self._pay(case["defendant"], total_pool)
 
-        case["status"] = 2  # status: 2 = judged
-        case["ruling"] = json.dumps(result)
+        case["status"] = 5  # status: 5 = finalized
+        self.cases[case_id] = json.dumps(case)
+
+    @gl.public.write.payable
+    def appeal_case(self, case_id: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 2:
+            raise gl.vm.UserError("Case not in appeal window")
+
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        if now > int(case["appeal_deadline"]):
+            raise gl.vm.UserError("Appeal window has expired")
+
+        ruling = json.loads(case["ruling"])
+        loser = case["defendant"] if ruling["verdict"] == "plaintiff" else case["plaintiff"]
+
+        if str(gl.message.sender_address) != loser:
+            raise gl.vm.UserError("Only the losing party can appeal")
+
+        value = gl.message.value
+        required_bond = u256(int(case["stake"]))
+        if value != required_bond:
+            raise gl.vm.UserError(f"Must pay appeal bond of {case['stake']}")
+
+        case["status"] = 3  # status: 3 = appealed
+        case["appealed_by"] = str(gl.message.sender_address)
         self.cases[case_id] = json.dumps(case)
 
     def _extract_json(self, response: str) -> dict:
