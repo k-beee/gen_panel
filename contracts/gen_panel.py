@@ -195,6 +195,75 @@ Return JSON block:
         case["appealed_by"] = str(gl.message.sender_address)
         self.cases[case_id] = json.dumps(case)
 
+    @gl.public.write
+    def judge_appeal(self, case_id: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 3:
+            raise gl.vm.UserError("Case not ready for appeal judgment")
+
+        charter = self.charter
+        initial_ruling = json.loads(case["ruling"])
+
+        def leader_fn():
+            prompt = f"""You are a Supreme Court Appeal Judge.
+You must review the initial dispute ruling and determine if it was correct, or if it should be overturned.
+
+DAO/Service Rules:
+{charter}
+
+CASE TITLE: {case['title']}
+
+PLAINTIFF ({case['plaintiff']}):
+Complaint: {case['complaint']}
+Evidence: {case['evidence']}
+
+DEFENDANT ({case['defendant']}):
+Defense: {case['defense']}
+Evidence: {case['defense_evidence']}
+
+INITIAL RULING:
+Verdict: {initial_ruling['verdict']}
+Violation Found: {initial_ruling['violation_found']}
+Reasoning: {initial_ruling['reasoning']}
+
+Evaluate:
+1. Did the initial judge make any errors?
+2. Overturn or uphold the verdict?
+3. What is the final final verdict?
+
+Return JSON block:
+{{
+    "verdict": "plaintiff" or "defendant",
+    "violation_found": true or false,
+    "reasoning": "detailed appeal explanation"
+}}"""
+            response = gl.nondet.exec_prompt(prompt)
+            return self._extract_json(response)
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            validator_data = leader_fn()
+            leader_data = leader_result.calldata
+            return (leader_data["verdict"] == validator_data["verdict"]
+                    and leader_data["violation_found"] == validator_data["violation_found"])
+
+        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+
+        p_stake = u256(int(case["stake"]))
+        d_stake = u256(int(case["defendant_stake"]))
+        appeal_bond = p_stake
+        total_pool = p_stake + d_stake + appeal_bond
+
+        if result["verdict"] == "plaintiff":
+            self._pay(case["plaintiff"], total_pool)
+        else:
+            self._pay(case["defendant"], total_pool)
+
+        case["status"] = 5  # status: 5 = finalized
+        case["appeal_ruling"] = json.dumps(result)
+        self.cases[case_id] = json.dumps(case)
+
     def _extract_json(self, response: str) -> dict:
         s = response.strip()
         if "```json" in s:
