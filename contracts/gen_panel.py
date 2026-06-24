@@ -91,6 +91,70 @@ class GenPanel(gl.Contract):
         stake = u256(int(case["stake"]))
         self._pay(case["plaintiff"], stake)
 
+    @gl.public.write
+    def judge_case(self, case_id: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 1:
+            raise gl.vm.UserError("Case not ready for judgment")
+
+        charter = self.charter
+
+        def leader_fn():
+            prompt = f"""You are a decentralized court judge.
+DAO/Service Rules:
+{charter}
+
+CASE TITLE: {case['title']}
+
+PLAINTIFF ({case['plaintiff']}):
+Complaint: {case['complaint']}
+Evidence: {case['evidence']}
+
+DEFENDANT ({case['defendant']}):
+Defense: {case['defense']}
+Evidence: {case['defense_evidence']}
+
+Determine:
+1. Did the defendant violate the rules?
+2. Is the plaintiff's complaint valid?
+3. What is the verdict?
+
+Return JSON block:
+{{
+    "verdict": "plaintiff" or "defendant",
+    "violation_found": true or false,
+    "reasoning": "brief explanation referencing specific charter rules"
+}}"""
+            response = gl.nondet.exec_prompt(prompt)
+            return self._extract_json(response)
+
+        def validator_fn(leader_result) -> bool:
+            if not isinstance(leader_result, gl.vm.Return):
+                return False
+            validator_data = leader_fn()
+            leader_data = leader_result.calldata
+            return (leader_data["verdict"] == validator_data["verdict"]
+                    and leader_data["violation_found"] == validator_data["violation_found"])
+
+        result = gl.vm.run_nondet_unsafe(leader_fn, validator_fn)
+
+        p_stake = u256(int(case["stake"]))
+        d_stake = u256(int(case["defendant_stake"]))
+        total_pool = p_stake + d_stake
+
+        if result["verdict"] == "plaintiff":
+            self._pay(case["plaintiff"], total_pool)
+        else:
+            self._pay(case["defendant"], total_pool)
+
+        case["status"] = 2  # status: 2 = judged
+        case["ruling"] = json.dumps(result)
+        self.cases[case_id] = json.dumps(case)
+
+    def _extract_json(self, response: str) -> dict:
+        # Stub for extracting JSON, will be fully implemented in Task 8
+        return json.loads(response)
+
     def _pay(self, recipient: str, amount: u256) -> None:
         @gl.evm.contract_interface
         class _Recipient:
