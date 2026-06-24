@@ -72,8 +72,9 @@ class GenPanel(gl.Contract):
         self.cases[case_id] = json.dumps(case)
 
     def _parse_timestamp(self, iso_str: str) -> int:
-        # Stub for parsing ISO timestamp deterministically
-        return 0
+        normalized = iso_str.replace("Z", "+00:00")
+        dt = datetime.fromisoformat(normalized)
+        return int(dt.timestamp())
 
     @gl.public.view
     def get_case(self, case_id: str) -> str:
