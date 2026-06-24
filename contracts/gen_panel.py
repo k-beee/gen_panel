@@ -53,7 +53,7 @@ class GenPanel(gl.Contract):
         case = json.loads(self.cases[case_id])
         if case["status"] != 0:
             raise gl.vm.UserError("Case not awaiting defense")
-        if str(gl.message.sender_address) != case["defendant"]:
+        if str(gl.message.sender_address).lower() != case["defendant"].lower():
             raise gl.vm.UserError("Only defendant can respond")
 
         now = self._parse_timestamp(gl.message_raw["datetime"])
@@ -76,7 +76,7 @@ class GenPanel(gl.Contract):
         case = json.loads(self.cases[case_id])
         if case["status"] != 0:
             raise gl.vm.UserError("Case not eligible for default judgment")
-        if str(gl.message.sender_address) != case["plaintiff"]:
+        if str(gl.message.sender_address).lower() != case["plaintiff"].lower():
             raise gl.vm.UserError("Only plaintiff can claim default judgment")
 
         now = self._parse_timestamp(gl.message_raw["datetime"])
@@ -183,7 +183,7 @@ Return JSON block:
         ruling = json.loads(case["ruling"])
         loser = case["defendant"] if ruling["verdict"] == "plaintiff" else case["plaintiff"]
 
-        if str(gl.message.sender_address) != loser:
+        if str(gl.message.sender_address).lower() != loser.lower():
             raise gl.vm.UserError("Only the losing party can appeal")
 
         value = gl.message.value

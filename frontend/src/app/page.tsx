@@ -357,7 +357,7 @@ export default function Home() {
               {/* Interactive Panel Operations */}
               <div style={operationsBarStyle}>
                 {/* Defendant submits response */}
-                {selected.status === 0 && wallet.address === selected.defendant && (
+                {selected.status === 0 && wallet.address?.toLowerCase() === selected.defendant?.toLowerCase() && (
                   <div style={opCardStyle}>
                     <h4 style={{ margin: "0 0 10px 0" }}>Submit Legal Defense</h4>
                     <textarea
@@ -391,7 +391,7 @@ export default function Home() {
                 )}
 
                 {/* Plaintiff claims default judgment */}
-                {selected.status === 0 && wallet.address === selected.plaintiff && (
+                {selected.status === 0 && wallet.address?.toLowerCase() === selected.plaintiff?.toLowerCase() && (
                   <div style={opCardStyle}>
                     <h4 style={{ margin: "0 0 8px 0" }}>Claim Default Resolution</h4>
                     <p style={{ fontSize: 13, color: "#94a3b8", margin: "0 0 12px 0" }}>
