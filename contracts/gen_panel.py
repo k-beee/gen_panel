@@ -152,8 +152,34 @@ Return JSON block:
         self.cases[case_id] = json.dumps(case)
 
     def _extract_json(self, response: str) -> dict:
-        # Stub for extracting JSON, will be fully implemented in Task 8
-        return json.loads(response)
+        s = response.strip()
+        if "```json" in s:
+            parts = s.split("```json")
+            if len(parts) > 1:
+                inner = parts[1].split("```")[0].strip()
+                try:
+                    return json.loads(inner)
+                except Exception:
+                    pass
+        elif "```" in s:
+            parts = s.split("```")
+            if len(parts) > 1:
+                inner = parts[1].split("```")[0].strip()
+                try:
+                    return json.loads(inner)
+                except Exception:
+                    pass
+
+        start = s.find('{')
+        end = s.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            candidate = s[start:end+1]
+            try:
+                return json.loads(candidate)
+            except Exception:
+                pass
+
+        return json.loads(s)
 
     def _pay(self, recipient: str, amount: u256) -> None:
         @gl.evm.contract_interface
