@@ -48,6 +48,29 @@ class GenPanel(gl.Contract):
         self.cases[case_id] = json.dumps(case)
         return self.case_count
 
+    @gl.public.write.payable
+    def submit_defense(self, case_id: str, defense: str, evidence: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 0:
+            raise gl.vm.UserError("Case not awaiting defense")
+        if str(gl.message.sender_address) != case["defendant"]:
+            raise gl.vm.UserError("Only defendant can respond")
+
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        if now > int(case["deadline"]):
+            raise gl.vm.UserError("Submission deadline passed")
+
+        value = gl.message.value
+        required_stake = u256(int(case["stake"]))
+        if value != required_stake:
+            raise gl.vm.UserError(f"Must stake matching fee of {case['stake']}")
+
+        case["defense"] = defense
+        case["defense_evidence"] = evidence
+        case["defendant_stake"] = str(value)
+        case["status"] = 1  # status: 1 = active/defense_submitted
+        self.cases[case_id] = json.dumps(case)
+
     def _parse_timestamp(self, iso_str: str) -> int:
         # Stub for parsing ISO timestamp deterministically
         return 0
