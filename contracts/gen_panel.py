@@ -71,6 +71,35 @@ class GenPanel(gl.Contract):
         case["status"] = 1  # status: 1 = active/defense_submitted
         self.cases[case_id] = json.dumps(case)
 
+    @gl.public.write
+    def claim_default_judgment(self, case_id: str) -> None:
+        case = json.loads(self.cases[case_id])
+        if case["status"] != 0:
+            raise gl.vm.UserError("Case not eligible for default judgment")
+        if str(gl.message.sender_address) != case["plaintiff"]:
+            raise gl.vm.UserError("Only plaintiff can claim default judgment")
+
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        if now <= int(case["deadline"]):
+            raise gl.vm.UserError("Deadline has not yet passed")
+
+        # Mark as defaulted
+        case["status"] = 4  # 4 = defaulted
+        self.cases[case_id] = json.dumps(case)
+
+        # Refund stake
+        stake = u256(int(case["stake"]))
+        self._pay(case["plaintiff"], stake)
+
+    def _pay(self, recipient: str, amount: u256) -> None:
+        @gl.evm.contract_interface
+        class _Recipient:
+            class View:
+                pass
+            class Write:
+                pass
+        _Recipient(Address(recipient)).emit_transfer(value=amount)
+
     def _parse_timestamp(self, iso_str: str) -> int:
         normalized = iso_str.replace("Z", "+00:00")
         dt = datetime.fromisoformat(normalized)
