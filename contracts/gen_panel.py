@@ -6,6 +6,37 @@ import typing
 from datetime import datetime, timezone
 
 
+def _extract_json(response: str) -> dict:
+    s = response.strip()
+    if "```json" in s:
+        parts = s.split("```json")
+        if len(parts) > 1:
+            inner = parts[1].split("```")[0].strip()
+            try:
+                return json.loads(inner)
+            except Exception:
+                pass
+    elif "```" in s:
+        parts = s.split("```")
+        if len(parts) > 1:
+            inner = parts[1].split("```")[0].strip()
+            try:
+                return json.loads(inner)
+            except Exception:
+                pass
+
+    start = s.find('{')
+    end = s.rfind('}')
+    if start != -1 and end != -1 and end > start:
+        candidate = s[start:end+1]
+        try:
+            return json.loads(candidate)
+        except Exception:
+            pass
+
+    return json.loads(s)
+
+
 class GenPanel(gl.Contract):
     case_count: i32
     cases: TreeMap[str, str]
@@ -126,7 +157,7 @@ Return JSON block:
     "reasoning": "brief explanation referencing specific charter rules"
 }}"""
             response = gl.nondet.exec_prompt(prompt)
-            return self._extract_json(response)
+            return _extract_json(response)
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
@@ -238,7 +269,7 @@ Return JSON block:
     "reasoning": "detailed appeal explanation"
 }}"""
             response = gl.nondet.exec_prompt(prompt)
-            return self._extract_json(response)
+            return _extract_json(response)
 
         def validator_fn(leader_result) -> bool:
             if not isinstance(leader_result, gl.vm.Return):
@@ -263,36 +294,6 @@ Return JSON block:
         case["status"] = 5  # status: 5 = finalized
         case["appeal_ruling"] = json.dumps(result)
         self.cases[case_id] = json.dumps(case)
-
-    def _extract_json(self, response: str) -> dict:
-        s = response.strip()
-        if "```json" in s:
-            parts = s.split("```json")
-            if len(parts) > 1:
-                inner = parts[1].split("```")[0].strip()
-                try:
-                    return json.loads(inner)
-                except Exception:
-                    pass
-        elif "```" in s:
-            parts = s.split("```")
-            if len(parts) > 1:
-                inner = parts[1].split("```")[0].strip()
-                try:
-                    return json.loads(inner)
-                except Exception:
-                    pass
-
-        start = s.find('{')
-        end = s.rfind('}')
-        if start != -1 and end != -1 and end > start:
-            candidate = s[start:end+1]
-            try:
-                return json.loads(candidate)
-            except Exception:
-                pass
-
-        return json.loads(s)
 
     def _pay(self, recipient: str, amount: u256) -> None:
         @gl.evm.contract_interface
