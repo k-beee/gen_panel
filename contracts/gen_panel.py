@@ -313,6 +313,12 @@ Return JSON block:
         return self.cases[case_id]
 
     @gl.public.view
+    def is_expired(self, case_id: str) -> bool:
+        case = json.loads(self.cases[case_id])
+        now = self._parse_timestamp(gl.message_raw["datetime"])
+        return now > int(case["deadline"])
+
+    @gl.public.view
     def get_charter(self) -> str:
         return self.charter
 
