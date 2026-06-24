@@ -48,7 +48,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<Case | null>(null);
   const [showFile, setShowFile] = useState(false);
-  const [form, setForm] = useState({ title: "", complaint: "", evidence: "", defendant: "", stake: "", duration: "86400" });
+  const [form, setForm] = useState({ title: "", complaint: "", evidence: "", defendant: "", stake: "", duration: "24" });
   const [defense, setDefense] = useState({ text: "", evidence: "" });
   const [tx, setTx] = useState("");
 
@@ -142,10 +142,12 @@ export default function Home() {
       </div>
 
       {/* System Stats / Charter Banner */}
-      <div style={charterContainerStyle}>
-        <div style={charterTitleStyle}>📜 Active DAO Charter / Arbitration Rules</div>
-        <p style={charterTextStyle}>{charter || "No active charter rules loaded in this contract."}</p>
-      </div>
+      {charter && (
+        <div style={charterContainerStyle}>
+          <div style={charterTitleStyle}>📜 Active DAO Charter / Arbitration Rules</div>
+          <p style={charterTextStyle}>{charter}</p>
+        </div>
+      )}
 
       {tx && <div style={statusBannerStyle}>{tx}</div>}
 
@@ -537,10 +539,10 @@ export default function Home() {
                 />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Resolution Timeout (secs)</label>
+                <label style={labelStyle}>Resolution Timeout (hours)</label>
                 <input
                   type="number"
-                  placeholder="86400"
+                  placeholder="24"
                   value={form.duration}
                   onChange={(e) => setForm({ ...form, duration: e.target.value })}
                   required

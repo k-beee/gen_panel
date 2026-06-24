@@ -16,7 +16,7 @@ class GenPanel(gl.Contract):
         self.charter = charter
 
     @gl.public.write.payable
-    def file_case(self, title: str, complaint: str, evidence: str, defendant: str, duration_seconds: int) -> i32:
+    def file_case(self, title: str, complaint: str, evidence: str, defendant: str, duration_hours: int) -> i32:
         value = gl.message.value
         if value == u256(0):
             raise gl.vm.UserError("Must stake filing fee")
@@ -25,7 +25,7 @@ class GenPanel(gl.Contract):
         case_id = str(int(self.case_count))
 
         now = self._parse_timestamp(gl.message_raw["datetime"])
-        deadline = now + duration_seconds
+        deadline = now + duration_hours * 3600
 
         case = {
             "id": case_id,
