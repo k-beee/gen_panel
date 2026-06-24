@@ -130,9 +130,17 @@ export default function Home() {
           <span style={logoSubtitleStyle}>Intelligent Arbitration Protocol</span>
         </div>
         {wallet.address ? (
-          <div style={walletBadgeStyle}>
-            <div style={walletDotStyle} />
-            <span style={walletAddressStyle}>{shortAddr(wallet.address)}</span>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div style={walletBadgeStyle}>
+              <div style={walletDotStyle} />
+              <span style={walletAddressStyle}>{shortAddr(wallet.address)}</span>
+            </div>
+            <button
+              onClick={() => setWallet({ address: null, client: null })}
+              style={btnDisconnectStyle}
+            >
+              Disconnect
+            </button>
           </div>
         ) : (
           <button onClick={handleConnect} style={btnConnectStyle}>
@@ -609,6 +617,18 @@ const btnConnectStyle: React.CSSProperties = {
   cursor: "pointer",
   fontSize: 14,
   boxShadow: "0 4px 12px rgba(14, 165, 233, 0.25)"
+};
+
+const btnDisconnectStyle: React.CSSProperties = {
+  background: "transparent",
+  color: "#ef4444",
+  border: "1px solid #ef4444",
+  borderRadius: "8px",
+  padding: "8px 14px",
+  fontWeight: 600,
+  cursor: "pointer",
+  fontSize: 13,
+  transition: "all 0.2s"
 };
 
 const walletBadgeStyle: React.CSSProperties = {
