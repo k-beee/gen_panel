@@ -2,8 +2,9 @@
 
 **A Game-Theoretically Balanced Decentralized Arbitration & Escrow Resolution Protocol powered by GenLayer AI Consensus.**
 
-🔗 **Live App:** https://gen-panel.vercel.app/
-📜 **Contract (GenLayer Studionet):** `0x7Ea0Cbf560C8e04161887ddf9d9964B57a6d5109`
+**Live App:** https://gen-panel.vercel.app/
+
+**Contract (GenLayer Studionet):** `0x7Ea0Cbf560C8e04161887ddf9d9964B57a6d5109`
 
 ---
 
